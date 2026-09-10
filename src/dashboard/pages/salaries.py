@@ -80,8 +80,8 @@ def render(df: pd.DataFrame) -> None:
         })
     )
     # Adicionar coluna de cobertura
-    total_por_cat = df.groupby("categoria").size()
-    resumo["Nº total vagas"] = total_por_cat
+    total_por_cat = df.groupby("categoria").size().reset_index(name="Nº total vagas")
+    resumo = resumo.merge(total_por_cat, on="categoria", how="left")
     resumo["Cobertura %"] = (resumo["Nº vagas c/ salário"] / resumo["Nº total vagas"] * 100).round(1)
     resumo = resumo.sort_values("Mediana", ascending=False)
 
