@@ -38,41 +38,66 @@ O resultado é um **dashboard interativo** construído com Streamlit que respond
 
 ## Getting Started
 
-<!-- TODO: completar com instruções de setup local, venv, variáveis de ambiente, rodar o pipeline e o dashboard -->
+### Setup local
 
 ```bash
-# Clone
 git clone https://github.com/devLeandroCoelho/careercompass-br.git
 cd careercompass-br
 
-# Ambiente virtual
 python -m venv .venv
 source .venv/bin/activate
 
-# Dependências
-pip install -r requirements.txt
+pip install -e ".[dev]"
 
-# Pipeline ETL
-python -m src.etl.pipeline
+# Opcional: copie e ajuste as variáveis
+cp .env.example .env
+```
 
-# Dashboard
-streamlit run src/dashboard/app.py
+### Rodar o pipeline ETL
+
+```bash
+# Dry-run com limite de páginas (default: MAX_PAGES=3)
+MAX_PAGES=3 python -m careercompass
+
+# Ou com mais páginas por fonte
+MAX_PAGES=5 REQUEST_DELAY=2.0 python -m careercompass
+```
+
+O pipeline:
+1. Coleta vagas das 3 fontes (Gupy API + GeekHunter + Programathor) com throttle,
+2. Normaliza (stack, senioridade, salário, cidade/UF, modalidade),
+3. Deduplica por `(fonte, url)` / `(fonte, id)`,
+4. Carrega no DuckDB (`data/warehouse.duckdb`),
+5. Gera relatório em `src/careercompass/reports/pipeline-report-<data>.md`
+   com contagens por fonte, erros e cobertura salarial.
+
+> **Dados brutos** ficam em `data/raw/*.jsonl` e **não** são versionados.
+> O warehouse DuckDB também é local (gitignored).
+
+### Testes, lint e tipos
+
+```bash
+python -m pytest          # testes (52 casos)
+ruff check .              # lint (E, F, I, UP, B)
+ruff format --check .     # formatação
+mypy src/                 # type check estrito
 ```
 
 ## Estrutura do Projeto
 
 ```
 careercompass-br/
-├── src/
-│   ├── etl/            # Pipeline de coleta e transformação
-│   │   ├── parsers/    # Parsers por fonte (Gupy, GeekHunter, Programathor)
-│   │   └── normalize/  # Normalização e padronização
-│   ├── warehouse/      # Modelagem DuckDB (facts/dimensions)
-│   └── dashboard/      # App Streamlit
-├── notebooks/          # Análises exploratórias
-├── tests/              # Testes automatizados
-├── data/               # Dados brutos (gitignored)
-└── reports/            # Relatórios gerados
+├── src/careercompass/
+│   ├── ingestion/        # Coletores (Gupy, GeekHunter, Programathor, base)
+│   ├── processing/       # Normalização (stack/senioridade/salário/location) + dedup
+│   ├── warehouse/        # DuckDB (schema DDL + upsert idempotente)
+│   ├── reports/          # Relatórios gerados (gitignored)
+│   ├── pipeline.py       # Orquestração ETL
+│   └── config.py         # Configuração via env
+├── notebooks/            # Análises exploratórias (placeholder)
+├── tests/                # Testes pytest + fixtures
+├── data/                 # Dados brutos + warehouse (gitignored)
+└── Dockerfile            # Image para rodar o pipeline em container
 ```
 
 ## Roadmap
