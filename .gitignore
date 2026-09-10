@@ -20,12 +20,13 @@ env/
 # Streamlit
 .streamlit/secrets.toml
 
-# DuckDB
+# DuckDB (banco de dados — nunca commitar)
 *.duckdb
 *.duckdb.wal
 
-# Data (raw)
-/data/
+# Data (raw + warehouse — exceto snapshot versionável)
+/data/*
+!/data/snapshot/
 **/reports/pipeline-report-*.md
 
 # Testing & Linting caches

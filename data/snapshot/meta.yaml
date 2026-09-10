@@ -1,0 +1,27 @@
+# CareerCompass BR — Snapshot metadata
+# GERADO POR export_snapshot — dados reais do DuckDB
+# NÃO editar manualmente (regenerar com: python -m careercompass.export_snapshot)
+
+data_geracao: "2026-09-10"
+seed: 42
+max_rows: 500
+jobs_snapshot_linhas: 113
+salarios_snapshot_linhas: 8
+
+# Contagens por fonte (total no DuckDB)
+fontes:
+  programathor: 46
+  gupy: 41
+  geekhunter: 26
+
+# Cobertura salarial
+total_vagas: 113
+com_salario: 8
+cobertura_salarial_pct: 7.1
+
+# Colunas jobs_snapshot.parquet
+#   fonte, titulo, categoria_principal, senioridade, modalidade,
+#   cidade, estado, empresa, publicado_em, url
+
+# Colunas salarios_snapshot.parquet
+#   url, job_id, salario_min, salario_max, moeda
