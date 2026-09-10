@@ -1,0 +1,15 @@
+# ── Streamlit Config — CareerCompass BR Dashboard ─────────────────────
+# Docs: https://docs.streamlit.io/develop/api-reference/configuration/config.toml
+
+[theme]
+# Paleta "tech / data portfolio" — azul confiante, fundo limpo
+primaryColor   = "#3178C6"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F1F5F9"
+textColor      = "#1E293B"
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false
