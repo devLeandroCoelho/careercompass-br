@@ -15,6 +15,7 @@ env/
 # Environment
 .env
 .env.*
+!.env.example
 
 # Streamlit
 .streamlit/secrets.toml
@@ -25,6 +26,7 @@ env/
 
 # Data (raw)
 /data/
+**/reports/pipeline-report-*.md
 
 # Testing & Linting caches
 .pytest_cache/
