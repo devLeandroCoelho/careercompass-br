@@ -1,0 +1,11 @@
+services:
+  pipeline:
+    build:
+      context: .
+      target: production
+    volumes:
+      - ./data:/app/data
+      - ./reports:/app/reports
+    env_file:
+      - path: .env
+        required: false
