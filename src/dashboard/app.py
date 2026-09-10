@@ -76,6 +76,7 @@ st.markdown("""
 
 from src.dashboard.data_loader import FonteDados, carregar_dados, get_snapshot_meta, join_completo
 from src.dashboard.pages import about, overview, regions, salaries, stacks
+from src.dashboard.utils.normalizacao import preencher_missing, unique_ordered_values  # noqa: E402
 
 
 def _sidebar_banner(fonte: FonteDados, meta: dict | None = None) -> None:
@@ -121,7 +122,7 @@ def _sidebar_filtros(df) -> dict:
     st.sidebar.header("🔍 Filtros")
 
     # Stack / Categoria
-    categorias = sorted(df["categoria"].unique())
+    categorias = unique_ordered_values(df["categoria"])
     cat_sel = st.sidebar.multiselect(
         "Stack / Categoria",
         options=categorias,
@@ -131,7 +132,7 @@ def _sidebar_filtros(df) -> dict:
     )
 
     # Estado
-    estados = sorted(df["estado"].unique())
+    estados = unique_ordered_values(df["estado"])
     uf_sel = st.sidebar.multiselect(
         "Estado",
         options=estados,
@@ -141,8 +142,8 @@ def _sidebar_filtros(df) -> dict:
     )
 
     # Cidade (dinâmico ao estado selecionado)
-    df_filtrado_parcial = df[df["estado"].isin(uf_sel)]
-    cidades = sorted(df_filtrado_parcial["cidade"].unique())
+    df_filtrado_parcial = df[preencher_missing(df["estado"]).isin(uf_sel)]
+    cidades = unique_ordered_values(df_filtrado_parcial["cidade"])
     cid_sel = st.sidebar.multiselect(
         "Cidade",
         options=cidades,
@@ -195,11 +196,17 @@ def _sidebar_filtros(df) -> dict:
 
 
 def _aplicar_filtros(df, filtros: dict):
-    """Aplica filtros selecionados ao DataFrame."""
+    """Aplica filtros selecionados ao DataFrame.
+
+    Valores ausentes (estado/cidade/categoria) são normalizados com
+    `preencher_missing` antes do `isin` para casar com o rótulo
+    "não informado" exibido nos filtros (escolha documentada em
+    `src/dashboard/utils/normalizacao.py`).
+    """
     mask = (
         df["categoria"].isin(filtros["categoria"])
-        & df["estado"].isin(filtros["estado"])
-        & df["cidade"].isin(filtros["cidade"])
+        & preencher_missing(df["estado"]).isin(filtros["estado"])
+        & preencher_missing(df["cidade"]).isin(filtros["cidade"])
         & df["modalidade"].isin(filtros["modalidade"])
         & df["senioridade"].isin(filtros["senioridade"])
     )

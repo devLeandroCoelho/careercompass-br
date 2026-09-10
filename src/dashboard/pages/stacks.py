@@ -8,6 +8,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from ..charts import CORES_CATEGORIA, heatmap_senioridade_categoria
+from ..utils.normalizacao import unique_ordered_values
 
 
 def render(df: pd.DataFrame, dados: dict[str, pd.DataFrame]) -> None:
@@ -119,7 +120,7 @@ def render(df: pd.DataFrame, dados: dict[str, pd.DataFrame]) -> None:
         )
 
         # Top 5 skills por categoria
-        for cat in sorted(df["categoria"].unique()):
+        for cat in unique_ordered_values(df["categoria"]):
             cat_skills = (
                 js_full[js_full["categoria_principal"] == cat]
                 .groupby("nome")

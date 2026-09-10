@@ -19,6 +19,8 @@ from typing import Any
 
 import pandas as pd
 
+from src.dashboard.utils.normalizacao import preencher_missing
+
 logger = logging.getLogger(__name__)
 
 # ── Paths ─────────────────────────────────────────────────────────────
@@ -394,5 +396,20 @@ def join_completo(dados: dict[str, pd.DataFrame]) -> pd.DataFrame:
         "moeda": fj["moeda"].fillna("BRL"),
         "url": fj["url_original"],
     })
+
+    # ── Normalização central de valores ausentes (defensivo) ──────────
+    # Causa raiz do crash de produção (TypeError em sorted() com NaN misturado
+    # com str). Preenchemos ANTES de expor o DataFrame ao dashboard para que
+    # filtros e agrupamentos (groupby/pivot) sejam sempre consistentes.
+    # Escolha documentada em normalizacao.py: exibir "não informado" em vez de
+    # descartar — único caso excluído é o mapa geo (sem coordenadas).
+    result["cidade"] = preencher_missing(result["cidade"])
+    result["estado"] = preencher_missing(result["estado"])
+    result["categoria"] = preencher_missing(result["categoria"], label="sem-info")
+    # Modalidade/senioridade seguem o mapeamento padrão do snapshot
+    # (ausente → valor mais comum) para não adulterar o comportamento atual.
+    result["modalidade"] = preencher_missing(result["modalidade"], label="hibrido")
+    result["senioridade"] = preencher_missing(result["senioridade"], label="pleno")
+    result["fonte"] = preencher_missing(result["fonte"], label="desconhecida")
 
     return result
