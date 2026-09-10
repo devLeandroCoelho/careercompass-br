@@ -1,0 +1,174 @@
+name: "Ronda Diária"
+
+on:
+  schedule:
+    - cron: "30 7 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: read
+  contents: read
+
+jobs:
+  ronda:
+    name: "Ronda diária — Sprint 1"
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Gerar relatório e criar issue
+        run: |
+          REPO="${{ github.repository }}"
+          TODAY=$(date -u +%d/%m/%Y)
+          TODAY_ISO=$(date -u +%Y-%m-%d)
+
+          # === Último push ===
+          PUSHED=$(gh api "repos/$REPO" --jq '.pushed_at')
+          PUSH_DATE=$(echo "$PUSHED" | cut -d'T' -f1)
+          if [ "$PUSH_DATE" = "$TODAY_ISO" ]; then
+            PUSH_STATUS="✅ Push hoje ($PUSHED)"
+          else
+            DOW=$(date -u +%u)
+            if [ "$DOW" -le 5 ]; then
+              PUSH_STATUS="⚠️ Último push em $PUSH_DATE (dia útil — fora da métrica)"
+            else
+              PUSH_STATUS="✅ Fim de semana (sem métrica); último push em $PUSH_DATE"
+            fi
+          fi
+
+          # === PRs parados >48h ===
+          NOW=$(date +%s)
+          PR_DATA=$(gh pr list --repo "$REPO" --state open --json number,title,createdAt,headRefName,isDraft)
+          PR_COUNT=$(echo "$PR_DATA" | jq 'length')
+          HAS_STALE_PRS=false
+          {
+            echo "## PRs parados >48h"
+            echo ""
+            for i in $(seq 0 $((PR_COUNT - 1))); do
+              NUM=$(echo "$PR_DATA" | jq -r ".[$i].number")
+              TITLE=$(echo "$PR_DATA" | jq -r ".[$i].title")
+              BRANCH=$(echo "$PR_DATA" | jq -r ".[$i].headRefName")
+              DRAFT=$(echo "$PR_DATA" | jq -r ".[$i].isDraft")
+              CREATED=$(echo "$PR_DATA" | jq -r ".[$i].createdAt")
+              TS=$(date -d "$CREATED" +%s 2>/dev/null || echo 0)
+              AGE_DAYS=$(( (NOW - TS) / 86400 ))
+              if [ "$AGE_DAYS" -gt 2 ]; then
+                HAS_STALE_PRS=true
+                DRAFT_TAG=""
+                [ "$DRAFT" = "true" ] && DRAFT_TAG=" (draft)"
+                echo "- 🟠 PR #${NUM}: ${TITLE} — ${AGE_DAYS} dias"
+              fi
+            done
+            if [ "$HAS_STALE_PRS" = false ]; then
+              echo "_Nenhum PR parado há mais de 48h 🎉_"
+            fi
+          } > /tmp/prs-section.md
+
+          # === Issues Sprint 1 ===
+          ISS_DATA=$(gh issue list --repo "$REPO" --milestone "Sprint 1" --state open --json number,title,labels)
+          ISS_COUNT=$(echo "$ISS_DATA" | jq 'length')
+          {
+            echo "## Issues Sprint 1 abertas"
+            echo ""
+            for i in $(seq 0 $((ISS_COUNT - 1))); do
+              NUM=$(echo "$ISS_DATA" | jq -r ".[$i].number")
+              TITLE=$(echo "$ISS_DATA" | jq -r ".[$i].title")
+              LABELS=$(echo "$ISS_DATA" | jq -r "[.[$i].labels[].name] | join(\", \")")
+              if [ -n "$LABELS" ] && [ "$LABELS" != "null" ]; then
+                echo "- Issue #${NUM}: ${TITLE} — _${LABELS}_"
+              else
+                echo "- Issue #${NUM}: ${TITLE}"
+              fi
+            done
+            if [ "$ISS_COUNT" -eq 0 ]; then
+              echo "_Nenhuma issue aberta no Sprint 1_"
+            fi
+          } > /tmp/issues-section.md
+
+          # === Montar body do relatório ===
+          {
+            echo "# 📋 Ronda diária — $TODAY"
+            echo ""
+            echo "**Repo:** \`$REPO\`"
+            echo ""
+            echo "---"
+            echo ""
+            echo "## Último push"
+            echo ""
+            echo "$PUSH_STATUS"
+            echo ""
+            echo "---"
+            echo ""
+            cat /tmp/prs-section.md
+            echo ""
+            echo "---"
+            echo ""
+            cat /tmp/issues-section.md
+            echo ""
+            echo "---"
+            echo ""
+            echo "_Relatório gerado automaticamente pela workflow ronda-diaria.yml._"
+          } > /tmp/ronda-body.md
+
+          echo "=== Body gerado ==="
+          cat /tmp/ronda-body.md
+
+          # === Criar ou atualizar issue ===
+          TITLE="📋 Ronda diária — $TODAY"
+          EXISTING=$(gh issue list --repo "$REPO" --search 'Ronda diária in:title label:meta-ronda' --state open --json number --jq '.[0].number // empty')
+
+          if [ -n "$EXISTING" ]; then
+            gh issue edit "$EXISTING" --repo "$REPO" --title "$TITLE" --body-file /tmp/ronda-body.md
+            echo "✅ Issue #$EXISTING atualizada com ronda de $TODAY"
+          else
+            # gh issue create retorna a URL no stdout
+            ISSUE_URL=$(gh issue create --repo "$REPO" \
+              --title "$TITLE" \
+              --body-file /tmp/ronda-body.md \
+              --label "meta-ronda" \
+              --label "stale" \
+              --milestone "Sprint 1")
+            # Extrair número da URL: https://github.com/owner/repo/issues/123
+            NEW_NUM=$(echo "$ISSUE_URL" | grep -oE '[0-9]+$')
+            echo "✅ Issue #$NEW_NUM criada para ronda de $TODAY — $ISSUE_URL"
+
+            # Fechar issues de ronda antigas
+            gh issue list --repo "$REPO" --search 'Ronda diária in:title label:meta-ronda' --state open --json number --jq '.[].number' | while read OLD_NUM; do
+              if [ "$OLD_NUM" != "$NEW_NUM" ]; then
+                gh issue close "$OLD_NUM" --repo "$REPO" --comment "📋 Substituída pela ronda de $TODAY — veja issue #$NEW_NUM"
+                echo "  → Issue #$OLD_NUM antiga fechada"
+              fi
+            done
+          fi
+
+  stale:
+    name: "Detectar PRs/issues stale"
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/stale@v9
+        with:
+          days-before-stale: 2
+          days-before-close: -1
+          stale-issue-label: "stale"
+          stale-pr-label: "stale"
+          stale-issue-message: |
+            ⚠️ **Issue sem atividade (stale)**
+
+            Esta issue ficou sem atualização há mais de 2 dias.
+            Por favor, atualize o status ou comente para manter ela ativa.
+
+            _— Automação da fábrica_
+          stale-pr-message: |
+            ⚠️ **PR sem atividade (stale)**
+
+            Este PR ficou sem atualização há mais de 2 dias.
+            Por favor, faça review, resolva os comentários ou prossiga com o merge.
+
+            _— Automação da fábrica_
+          exempt-issue-labels: "pinned,meta-ronda"
+          exempt-pr-labels: "pinned"
+          operations-per-run: 100
