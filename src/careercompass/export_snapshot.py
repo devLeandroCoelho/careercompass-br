@@ -127,16 +127,13 @@ def _write_meta(
     max_rows: int,
 ) -> Path:
     """Escreve meta.yaml como texto simples (sem dependência pyyaml)."""
-    cobertura = (
-        round(com_salario / total_vagas * 100, 1) if total_vagas > 0 else 0.0
-    )
+    cobertura = round(com_salario / total_vagas * 100, 1) if total_vagas > 0 else 0.0
     today = date.today().isoformat()
 
     lines = [
         "# CareerCompass BR — Snapshot metadata",
         "# GERADO POR export_snapshot — dados reais do DuckDB",
-        "# NÃO editar manualmente (regenerar com: "
-        "python -m careercompass.export_snapshot)",
+        "# NÃO editar manualmente (regenerar com: python -m careercompass.export_snapshot)",
         "",
         f'data_geracao: "{today}"',
         f"seed: {seed}",
@@ -191,8 +188,7 @@ def export_snapshot(
     try:
         # ── Contagens ──────────────────────────────────────────────────────
         fontes: list[FonteCount] = [
-            {"fonte": r[0], "total": r[1]}
-            for r in con.execute(_COUNT_BY_FONTE_SQL).fetchall()
+            {"fonte": r[0], "total": r[1]} for r in con.execute(_COUNT_BY_FONTE_SQL).fetchall()
         ]
         cov = con.execute(_SALARY_COVERAGE_SQL).fetchone()
         total_vagas: int = int(cov[0]) if cov else 0
@@ -203,9 +199,7 @@ def export_snapshot(
         total_available = len(all_jobs_df)
 
         if total_available > max_rows:
-            jobs_df = all_jobs_df.sample(
-                n=max_rows, random_state=seed
-            ).reset_index(drop=True)
+            jobs_df = all_jobs_df.sample(n=max_rows, random_state=seed).reset_index(drop=True)
         else:
             jobs_df = all_jobs_df
 
@@ -255,11 +249,7 @@ def export_snapshot(
         total_kb=round(total_kb, 1),
         total_vagas=total_vagas,
         com_salario=com_salario,
-        cobertura_pct=(
-            round(com_salario / total_vagas * 100, 1)
-            if total_vagas > 0
-            else 0
-        ),
+        cobertura_pct=(round(com_salario / total_vagas * 100, 1) if total_vagas > 0 else 0),
         por_fonte=fontes,
     )
 
@@ -287,26 +277,15 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
-        result = export_snapshot(
-            max_rows=args.max_rows, seed=args.seed
-        )
+        result = export_snapshot(max_rows=args.max_rows, seed=args.seed)
     except FileNotFoundError as exc:
         print(f"[export_snapshot] ERRO: {exc}", file=sys.stderr)
         sys.exit(1)
 
+    print(f"[export_snapshot] Snapshot gerado em: {result['snapshot_dir']}")
+    print(f"  jobs_snapshot.parquet:     {result['jobs_rows']} linhas, {result['jobs_kb']} KB")
     print(
-        f"[export_snapshot] Snapshot gerado em: "
-        f"{result['snapshot_dir']}"
-    )
-    print(
-        f"  jobs_snapshot.parquet:     "
-        f"{result['jobs_rows']} linhas, "
-        f"{result['jobs_kb']} KB"
-    )
-    print(
-        f"  salarios_snapshot.parquet: "
-        f"{result['salarios_rows']} linhas, "
-        f"{result['salarios_kb']} KB"
+        f"  salarios_snapshot.parquet: {result['salarios_rows']} linhas, {result['salarios_kb']} KB"
     )
     print(f"  meta.yaml:                {result['meta_kb']} KB")
     print(f"  Total:                    {result['total_kb']} KB")
@@ -316,9 +295,7 @@ def main() -> None:
         f"({result['com_salario']}/{result['total_vagas']})"
     )
     for fc in result["por_fonte"]:
-        print(
-            f"  Fonte {fc['fonte']}: {fc['total']} vagas no DW"
-        )
+        print(f"  Fonte {fc['fonte']}: {fc['total']} vagas no DW")
 
 
 if __name__ == "__main__":
