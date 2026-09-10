@@ -10,11 +10,17 @@ from ..charts import (
     bar_vagas_por_estado,
     mapa_bolhas_estado,
 )
+from ..utils.normalizacao import preencher_missing
 
 
 def render(df: pd.DataFrame) -> None:
     """Renderiza a página de regiões."""
     st.header("🗺️ Regiões e Localização")
+
+    # Estado ausente vira "não informado" (ver utils/normalizacao.py)
+    df = df.copy()
+    df["estado"] = preencher_missing(df["estado"])
+    df["cidade"] = preencher_missing(df["cidade"])
 
     # ── Mapa ───────────────────────────────────────────────────────────
     st.subheader("Mapa de Vagas por Estado")
@@ -71,6 +77,7 @@ def render(df: pd.DataFrame) -> None:
         "RO": "Rondônia", "RR": "Roraima", "RS": "Rio Grande do Sul",
         "SC": "Santa Catarina", "SE": "Sergipe", "SP": "São Paulo",
         "TO": "Tocantins",
+        "não informado": "Não informado",
     }
     uf_stats["Estado"] = uf_stats["estado"].map(_UF_NOMES)
 
