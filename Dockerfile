@@ -1,21 +1,28 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS base
 
 WORKDIR /app
 
-# Dependências de sistema
+# Dependências de sistema (só o necessário para compilar wheels)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar pyproject.toml e instalar deps
+# --- Stage: instalação de dependências ---
+FROM base AS deps
+
 COPY pyproject.toml .
-RUN pip install --no-cache-dir -e ".[dev]"
-
-# Copiar código-fonte
 COPY src/ src/
-COPY data/ data/
+RUN pip install --no-cache-dir .
 
-# Cria diretório de dados
-RUN mkdir -p data/raw
+# --- Stage: produção (sem dev deps) ---
+FROM base AS production
+
+COPY --from=deps /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=deps /usr/local/bin /usr/local/bin
+
+COPY src/ src/
+
+# Diretórios de dados (volume em runtime)
+RUN mkdir -p data/raw reports
 
 ENTRYPOINT ["python", "-m", "careercompass"]

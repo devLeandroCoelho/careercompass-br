@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# Python caches
+__pycache__
+*.py[cod]
+*.egg-info
+dist/
+build/
+*.egg
+
+# Virtual env
+.venv/
+venv/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Testing / Linting caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Data (montado como volume)
+data/
+reports/
+
+# Docs / Config nao necessarios no container
+*.md
+LICENSE
+.pre-commit-config.yaml
+notebooks/
+tests/
