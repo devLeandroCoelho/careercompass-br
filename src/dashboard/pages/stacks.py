@@ -17,7 +17,13 @@ def render(df: pd.DataFrame, dados: dict[str, pd.DataFrame]) -> None:
     # ── Skills mais requisitadas ───────────────────────────────────────
     st.subheader("Skills Mais Requisitadas")
 
-    if "dim_skill" in dados and "fact_job_skill" in dados:
+    has_skills = (
+        "dim_skill" in dados
+        and "fact_job_skill" in dados
+        and not dados["dim_skill"].empty
+        and not dados["fact_job_skill"].empty
+    )
+    if has_skills:
         skills = dados["dim_skill"]
         job_skills = dados["fact_job_skill"]
 
@@ -102,7 +108,7 @@ def render(df: pd.DataFrame, dados: dict[str, pd.DataFrame]) -> None:
     st.divider()
     st.subheader("Skills por Categoria (frequência)")
 
-    if "dim_skill" in dados and "fact_job_skill" in dados:
+    if has_skills:
         skills = dados["dim_skill"]
         job_skills = dados["fact_job_skill"]
         fj = dados["fact_job"]

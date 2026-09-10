@@ -74,13 +74,38 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-from src.dashboard.data_loader import carregar_dados, join_completo
+from src.dashboard.data_loader import FonteDados, carregar_dados, get_snapshot_meta, join_completo
 from src.dashboard.pages import about, overview, regions, salaries, stacks
 
 
-def _sidebar_banner(eh_mock: bool) -> None:
-    """Exibe banner na sidebar indicando modo de dados."""
-    if eh_mock:
+def _sidebar_banner(fonte: FonteDados, meta: dict | None = None) -> None:
+    """Exibe banner na sidebar indicando a fonte de dados ativa."""
+    if fonte == FonteDados.DUCKDB:
+        st.sidebar.success("✅ Conectado ao warehouse DuckDB")
+    elif fonte == FonteDados.SNAPSHOT:
+        data_geracao = meta.get("data_geracao", "") if meta else ""
+        n_vagas = meta.get("jobs_snapshot_linhas", "?") if meta else "?"
+        if data_geracao:
+            # Converter YYYY-MM-DD para DD/MM/YYYY
+            partes = str(data_geracao).split("-")
+            if len(partes) == 3:
+                data_fmt = f"{partes[2]}/{partes[1]}/{partes[0]}"
+            else:
+                data_fmt = str(data_geracao)
+        else:
+            data_fmt = "data desconhecida"
+        st.sidebar.markdown(
+            '<div class="demo-banner">'
+            '📊 <strong>Dados reais coletados</strong><br>'
+            f'Amostra de <strong>{n_vagas} vagas</strong> — '
+            f'coletadas em {data_fmt}<br>'
+            '<span style="font-size:0.85em;">'
+            'Execute o pipeline ETL para dados completos.'
+            '</span>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+    else:
         st.sidebar.markdown(
             '<div class="demo-banner">'
             '⚠️ <strong>Dados de Demonstração</strong><br>'
@@ -89,8 +114,6 @@ def _sidebar_banner(eh_mock: bool) -> None:
             '</div>',
             unsafe_allow_html=True,
         )
-    else:
-        st.sidebar.success("✅ Conectado ao warehouse DuckDB")
 
 
 def _sidebar_filtros(df) -> dict:
@@ -187,8 +210,11 @@ def main() -> None:
     """Função principal do dashboard."""
 
     # ── Carregar dados ─────────────────────────────────────────────────
-    dados, eh_mock = carregar_dados()
+    dados, fonte = carregar_dados()
     df = join_completo(dados)
+
+    # Meta do snapshot (se aplicável)
+    snapshot_meta = get_snapshot_meta() if fonte == FonteDados.SNAPSHOT else None
 
     # ── Sidebar ────────────────────────────────────────────────────────
     with st.sidebar:
@@ -199,7 +225,7 @@ def main() -> None:
         st.title("🧭 CareerCompass BR")
         st.caption("Análise de Mercado de TI/Dados no Brasil")
 
-        _sidebar_banner(eh_mock)
+        _sidebar_banner(fonte, snapshot_meta)
 
         filtros = _sidebar_filtros(df)
 
@@ -255,6 +281,18 @@ def main() -> None:
 
     # ── Rodapé ─────────────────────────────────────────────────────────
     st.divider()
+
+    # Caveat de cobertura salarial
+    total = len(df)
+    com_sal = df["salario_min"].notna().sum()
+    pct_sal = (com_sal / total * 100) if total > 0 else 0
+    st.caption(
+        f"⚠️ **Salário divulgado em ~{pct_sal:.0f}% das vagas** "
+        f"({com_sal} de {total}). "
+        "Muitas empresas não publicam faixa salarial — a análise reflete "
+        "apenas o subconjunto disponível."
+    )
+
     st.caption(
         "🧭 **CareerCompass BR** — Portfólio de Análise de Dados | "
         "Dados coletados de fontes públicas (Gupy, GeekHunter, Programathor) | "
