@@ -1,0 +1,44 @@
+[
+  {
+    "data": [
+      {
+        "id": 10001,
+        "name": "Analista de Dados Jr",
+        "url": "https://portal.gupy.io/job/10001",
+        "publishedDate": "2026-09-01",
+        "workplaceType": "remote",
+        "workType": "CLT",
+        "description": "Vaga para analista de dados com Python e SQL",
+        "careers": [
+          {
+            "city": "São Paulo",
+            "state": "SP"
+          }
+        ],
+        "company": {
+          "id": 501,
+          "name": "TechCorp"
+        }
+      },
+      {
+        "id": 10002,
+        "name": "Desenvolvedor Python Pleno",
+        "url": "https://portal.gupy.io/job/10002",
+        "publishedDate": "2026-09-02",
+        "workplaceType": "hybrid",
+        "workType": "CLT",
+        "description": "Desenvolvedor Python com Django",
+        "careers": [
+          {
+            "city": "Rio de Janeiro",
+            "state": "RJ"
+          }
+        ],
+        "company": {
+          "id": 502,
+          "name": "DataLab"
+        }
+      }
+    ]
+  }
+]
